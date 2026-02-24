@@ -38,11 +38,24 @@ while IFS= read -r row; do
   branch=$(echo "$row" | jq -r '.branch')
   repo=$(echo "$row" | jq -r '.repo')
 
-  # tmux alive?
+  # tmux alive? (only if a tmux session is specified)
   tmuxAlive=true
   if [ -n "$tmuxSession" ]; then
     if ! tmux has-session -t "$tmuxSession" 2>/dev/null; then
       tmuxAlive=false
+    fi
+  fi
+
+  # working tree activity (best effort)
+  worktree=$(echo "$row" | jq -r '.worktree // empty')
+  dirty=""
+  if [ -n "$worktree" ] && [ -d "$worktree" ]; then
+    if git -C "$worktree" status --porcelain >/tmp/git_status_$id.txt 2>/dev/null; then
+      if [ -s /tmp/git_status_$id.txt ]; then
+        dirty="dirty"
+      else
+        dirty="clean"
+      fi
     fi
   fi
 
@@ -66,7 +79,7 @@ while IFS= read -r row; do
   fi
 
   # Update status
-  if [ "$status" = "running" ] && [ "$tmuxAlive" = "false" ]; then
+  if [ "$status" = "running" ] && [ -n "$tmuxSession" ] && [ "$tmuxAlive" = "false" ]; then
     status="stopped"
   fi
 
@@ -76,13 +89,26 @@ while IFS= read -r row; do
     elif [ "$checksState" = "failed" ]; then
       status="blocked"
     else
-      # keep existing status
       status="$status"
     fi
   fi
 
-  updatedRow=$(echo "$row" | jq --arg status "$status" --arg prNumber "$prNumber" --arg prUrl "$prUrl" --arg prState "$prState" --arg checksState "$checksState" '
+  # Infer step
+  step=""
+  if [ "$status" = "ready" ]; then
+    step="pr-ready"
+  elif [ -n "$prNumber" ]; then
+    step="pr-open"
+  elif [ "$dirty" = "dirty" ]; then
+    step="editing"
+  elif [ "$status" = "running" ]; then
+    step="running"
+  fi
+
+  updatedRow=$(echo "$row" | jq --arg status "$status" --arg prNumber "$prNumber" --arg prUrl "$prUrl" --arg prState "$prState" --arg checksState "$checksState" --arg step "$step" '
     .status=$status
+    | .step=($step|if .=="" then null else . end)
+    | .lastUpdated= (now | todate)
     | .prNumber=($prNumber|if .=="" then null else (.|tonumber) end)
     | .prUrl=($prUrl|if .=="" then null else . end)
     | .prState=($prState|if .=="" then null else . end)
@@ -104,6 +130,11 @@ done
 printf '\n]\n' >> "$TASKS_FILE"
 
 # Print summary
-jq -r '.[] | "\(.id)\t\(.status)\t\(.branch)\t\(.worktree)\tPR:\(.prNumber // "-")\tCI:\(.checksState // "-")"' "$TASKS_FILE" || true
+jq -r '.[] | "\(.id)\t\(.status)\t\(.step // "-")\t\(.branch)\t\(.worktree)\tPR:\(.prNumber // "-")\tCI:\(.checksState // "-")"' "$TASKS_FILE" || true
 
-rm -f "$TMP" /tmp/gh_checks_*.txt || true
+# Append history snapshot
+HISTORY_FILE=".clawdbot/history.jsonl"
+TS=$(date -Iseconds)
+jq -c --arg ts "$TS" '{ts:$ts, tasks:.}' "$TASKS_FILE" >> "$HISTORY_FILE"
+
+rm -f "$TMP" /tmp/gh_checks_*.txt /tmp/git_status_*.txt || true

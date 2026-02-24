@@ -15,6 +15,17 @@ function readTasks() {
   }
 }
 
+function readHistory(limit = 50) {
+  const historyPath = path.join(__dirname, '..', '.clawdbot', 'history.jsonl');
+  try {
+    const raw = fs.readFileSync(historyPath, 'utf-8');
+    const lines = raw.trim().split('\n').filter(Boolean);
+    return lines.slice(-limit).map(line => JSON.parse(line));
+  } catch (e) {
+    return [];
+  }
+}
+
 const server = http.createServer((req, res) => {
   if (req.url === '/' || req.url.startsWith('/index.html')) {
     const html = fs.readFileSync(INDEX_PATH, 'utf-8');
@@ -24,8 +35,9 @@ const server = http.createServer((req, res) => {
 
   if (req.url === '/api/tasks') {
     const tasks = readTasks();
+    const history = readHistory(50);
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    return res.end(JSON.stringify({ updatedAt: Date.now(), tasks }));
+    return res.end(JSON.stringify({ updatedAt: Date.now(), tasks, history }));
   }
 
   if (req.url === '/events') {
@@ -37,7 +49,8 @@ const server = http.createServer((req, res) => {
 
     const send = () => {
       const tasks = readTasks();
-      res.write(`data: ${JSON.stringify({ updatedAt: Date.now(), tasks })}\n\n`);
+      const history = readHistory(50);
+      res.write(`data: ${JSON.stringify({ updatedAt: Date.now(), tasks, history })}\n\n`);
     };
 
     const interval = setInterval(send, 2000);

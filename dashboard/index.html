@@ -29,24 +29,31 @@
         <th>任务ID</th>
         <th>Agent</th>
         <th>状态</th>
+        <th>步骤</th>
         <th>分支</th>
         <th>工作区</th>
         <th>tmux</th>
         <th>PR</th>
         <th>CI</th>
+        <th>最后更新</th>
       </tr>
     </thead>
     <tbody id="rows"></tbody>
   </table>
 
+  <h2>历史执行记录（最近 50 条）</h2>
+  <div id="history" class="muted"></div>
+
 <script>
 const tbody = document.getElementById('rows');
 const ts = document.getElementById('ts');
+const historyEl = document.getElementById('history');
 
 const statusClass = (s) => (s||'').toLowerCase();
 
 function render(data) {
   const tasks = data.tasks || [];
+  const history = data.history || [];
   ts.textContent = new Date(data.updatedAt).toLocaleString();
   tbody.innerHTML = '';
   tasks.forEach(t => {
@@ -55,19 +62,28 @@ function render(data) {
     const statusTag = `<span class="tag ${statusClass(status)}">${status}</span>`;
     const pr = t.prUrl ? `<a href="${t.prUrl}" target="_blank">#${t.prNumber || ''}</a>` : '-';
     const ci = t.checksState || '-';
+    const lastUpdated = t.lastUpdated ? new Date(t.lastUpdated).toLocaleString() : '-';
 
     tr.innerHTML = `
       <td>${t.id || '-'}</td>
       <td>${t.agent || '-'}</td>
       <td>${statusTag}</td>
+      <td>${t.step || '-'}</td>
       <td>${t.branch || '-'}</td>
       <td class="muted">${t.worktree || '-'}</td>
       <td>${t.tmuxSession || '-'}</td>
       <td>${pr}</td>
       <td>${ci}</td>
+      <td>${lastUpdated}</td>
     `;
     tbody.appendChild(tr);
   });
+
+  historyEl.innerHTML = history.map(h => {
+    const when = new Date(h.ts).toLocaleString();
+    const list = (h.tasks || []).map(t => `${t.id}:${t.status}${t.step ? '('+t.step+')' : ''}`).join(' · ');
+    return `<div>${when} — ${list}</div>`;
+  }).join('') || '<div>暂无历史记录</div>';
 }
 
 // SSE realtime
