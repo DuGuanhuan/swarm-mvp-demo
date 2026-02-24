@@ -44,16 +44,21 @@
   <h2>历史执行记录（最近 50 条）</h2>
   <div id="history" class="muted"></div>
 
+  <h2>事件流（最近 100 条）</h2>
+  <div id="events" class="muted"></div>
+
 <script>
 const tbody = document.getElementById('rows');
 const ts = document.getElementById('ts');
 const historyEl = document.getElementById('history');
+const eventsEl = document.getElementById('events');
 
 const statusClass = (s) => (s||'').toLowerCase();
 
 function render(data) {
   const tasks = data.tasks || [];
   const history = data.history || [];
+  const events = data.events || [];
   ts.textContent = new Date(data.updatedAt).toLocaleString();
   tbody.innerHTML = '';
   tasks.forEach(t => {
@@ -84,6 +89,11 @@ function render(data) {
     const list = (h.tasks || []).map(t => `${t.id}:${t.status}${t.step ? '('+t.step+')' : ''}`).join(' · ');
     return `<div>${when} — ${list}</div>`;
   }).join('') || '<div>暂无历史记录</div>';
+
+  eventsEl.innerHTML = events.map(e => {
+    const when = new Date(e.ts).toLocaleString();
+    return `<div>${when} — [${e.agent}] ${e.type}: ${e.detail}</div>`;
+  }).join('') || '<div>暂无事件</div>';
 }
 
 // SSE realtime

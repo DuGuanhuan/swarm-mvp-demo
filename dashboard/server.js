@@ -26,6 +26,17 @@ function readHistory(limit = 50) {
   }
 }
 
+function readEvents(limit = 100) {
+  const eventsPath = path.join(__dirname, '..', '.clawdbot', 'events.jsonl');
+  try {
+    const raw = fs.readFileSync(eventsPath, 'utf-8');
+    const lines = raw.trim().split('\n').filter(Boolean);
+    return lines.slice(-limit).map(line => JSON.parse(line));
+  } catch (e) {
+    return [];
+  }
+}
+
 const server = http.createServer((req, res) => {
   if (req.url === '/' || req.url.startsWith('/index.html')) {
     const html = fs.readFileSync(INDEX_PATH, 'utf-8');
@@ -36,8 +47,9 @@ const server = http.createServer((req, res) => {
   if (req.url === '/api/tasks') {
     const tasks = readTasks();
     const history = readHistory(50);
+    const events = readEvents(100);
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    return res.end(JSON.stringify({ updatedAt: Date.now(), tasks, history }));
+    return res.end(JSON.stringify({ updatedAt: Date.now(), tasks, history, events }));
   }
 
   if (req.url === '/events') {
@@ -50,7 +62,8 @@ const server = http.createServer((req, res) => {
     const send = () => {
       const tasks = readTasks();
       const history = readHistory(50);
-      res.write(`data: ${JSON.stringify({ updatedAt: Date.now(), tasks, history })}\n\n`);
+      const events = readEvents(100);
+      res.write(`data: ${JSON.stringify({ updatedAt: Date.now(), tasks, history, events })}\n\n`);
     };
 
     const interval = setInterval(send, 2000);
