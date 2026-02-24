@@ -34,6 +34,7 @@ cat > "$OUT_FILE" <<HTML
 <body>
   <h1>Swarm 任务看板</h1>
   <div class="meta">数据来源：.clawdbot/active-tasks.json（生成时间：<span id="ts"></span>）</div>
+  <div class="meta muted">提示：页面每 30 秒自动刷新（需配合定时生成 HTML）</div>
   <table>
     <thead>
       <tr>
@@ -55,6 +56,9 @@ const data = $DATA;
 const tbody = document.getElementById('rows');
 const ts = document.getElementById('ts');
 ts.textContent = new Date().toLocaleString();
+
+// Auto-refresh page every 30s
+setTimeout(() => location.reload(), 30000);
 
 const statusClass = (s) => (s||'').toLowerCase();
 
