@@ -1,0 +1,19 @@
+{
+  "sources": [
+    {
+      "id": "src_demo_docs",
+      "name": "Demo Docs Feed",
+      "url": "https://example.com/docs",
+      "createdAt": "2026-02-24T00:00:00.000Z"
+    }
+  ],
+  "items": [
+    {
+      "id": "item_demo_001",
+      "sourceId": "src_demo_docs",
+      "title": "Welcome Item",
+      "content": "This is a seeded demo item.",
+      "ingestedAt": "2026-02-24T00:00:00.000Z"
+    }
+  ]
+}

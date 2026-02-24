@@ -1,0 +1,13 @@
+{
+  "name": "swarm-mvp-demo-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Minimal Express backend demo",
+  "main": "api/server.js",
+  "scripts": {
+    "start": "node api/server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
